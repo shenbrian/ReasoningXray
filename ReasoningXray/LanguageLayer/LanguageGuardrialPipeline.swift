@@ -10,7 +10,10 @@ struct LanguageGuardrailPipeline {
         self.scorer = EpistemicScoringEngine(pack: pack)
     }
 
-    func renderMandarin(for carrier: SignalCarrier) -> RenderAudit {
+    func renderMandarin(
+        for carrier: SignalCarrier,
+        session: LanguageRenderSessionContext
+    ) -> RenderAudit {
         let initialCandidate = pack.initialCandidate(for: carrier)
         let initialScore = scorer.score(initialCandidate, against: carrier)
 

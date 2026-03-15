@@ -282,8 +282,8 @@ struct VisitDetailView: View {
                 Text("None")
                     .foregroundStyle(.secondary)
             } else {
-                ForEach(cleaned, id: \.self) { item in
-                    Text("• \(item)")
+                ForEach(Array(cleaned.enumerated()), id: \.offset) { _, item in
+                    Text(item)
                 }
             }
         }

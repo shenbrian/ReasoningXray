@@ -14,7 +14,12 @@ enum LanguageLayerDemo {
         )
 
         let pipeline = LanguageGuardrailPipeline()
-        let audit = pipeline.renderMandarin(for: carrier)
+        let session = LanguageRenderSessionContext()
+
+        let audit = pipeline.renderMandarin(
+            for: carrier,
+            session: session
+        )
 
         print("----- Language Layer Demo -----")
         print("Segment ID: \(audit.segmentID)")
