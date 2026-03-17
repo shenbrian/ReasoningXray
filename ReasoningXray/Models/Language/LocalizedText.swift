@@ -21,9 +21,35 @@ struct LocalizedText: Codable, Hashable {
         }
     }
 
+    var base: String {
+        english ?? chineseSimplified ?? ""
+    }
+
+    var count: Int {
+        base.count
+    }
+
+    func lowercased() -> String {
+        base.lowercased()
+    }
+
+    func range(of string: String) -> Range<String.Index>? {
+        base.range(of: string)
+    }
+
+    subscript(bounds: Range<String.Index>) -> Substring {
+        base[bounds]
+    }
+
+    static func == (lhs: LocalizedText, rhs: String) -> Bool {
+        lhs.base == rhs
+    }
+
+    static func != (lhs: LocalizedText, rhs: String) -> Bool {
+        lhs.base != rhs
+    }
+
     var isEmpty: Bool {
-        let en = english?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let zh = chineseSimplified?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return en.isEmpty && zh.isEmpty
+        base.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 }

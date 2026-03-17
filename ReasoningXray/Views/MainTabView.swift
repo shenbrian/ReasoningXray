@@ -1,7 +1,10 @@
 import SwiftUI
 
+import SwiftUI
+
 struct MainTabView: View {
-    @ObservedObject var store: ReasoningHistoryStore
+
+    @EnvironmentObject var store: ReasoningHistoryStore
 
     var body: some View {
         TabView {

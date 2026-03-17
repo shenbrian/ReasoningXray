@@ -7,6 +7,10 @@ struct ThreadCardView: View {
 
     @EnvironmentObject var store: ReasoningHistoryStore
 
+    private var displayLanguage: DisplayLanguage {
+        store.displayLanguage
+    }
+
     private var presentation: CaseTrajectoryPresentation? {
         store.trajectoryPresentation(for: thread.id)
     }
@@ -22,26 +26,48 @@ struct ThreadCardView: View {
     private var compactPathLabel: String? {
         guard let path = presentation?.technical.overallPath else { return nil }
 
-        switch path {
-        case .earlyExploration:
+        switch (path, displayLanguage) {
+        case (.earlyExploration, .english):
             return "Exploring"
-        case .narrowing:
+        case (.earlyExploration, .chineseSimplified):
+            return "探索中"
+
+        case (.narrowing, .english):
             return "Narrowing"
-        case .workingDiagnosis:
+        case (.narrowing, .chineseSimplified):
+            return "聚焦中"
+
+        case (.workingDiagnosis, .english):
             return "Working explanation"
-        case .confirmation:
+        case (.workingDiagnosis, .chineseSimplified):
+            return "工作性解释"
+
+        case (.confirmation, .english):
             return "Becoming clearer"
-        case .monitoring:
+        case (.confirmation, .chineseSimplified):
+            return "逐渐清晰"
+
+        case (.monitoring, .english):
             return "Monitoring"
-        case .reopened:
+        case (.monitoring, .chineseSimplified):
+            return "观察中"
+
+        case (.reopened, .english):
             return "Reconsidering"
-        case .mixed:
+        case (.reopened, .chineseSimplified):
+            return "重新考虑中"
+
+        case (.mixed, .english):
             return "Mixed pattern"
+        case (.mixed, .chineseSimplified):
+            return "混合模式"
         }
     }
 
     private var compactNarrativeMeaning: String {
-        guard let text = presentation?.patient.narrativeMeaning else { return "" }
+        guard let text = presentation?.patient.narrativeMeaning.resolve(for: displayLanguage) else {
+            return ""
+        }
 
         if text.count <= 85 { return text }
 
@@ -55,21 +81,41 @@ struct ThreadCardView: View {
     private var compactExpectationLine: String? {
         guard let path = presentation?.technical.overallPath else { return nil }
 
-        switch path {
-        case .confirmation:
+        switch (path, displayLanguage) {
+        case (.confirmation, .english):
             return "Likely moving toward confirmation."
-        case .narrowing:
+        case (.confirmation, .chineseSimplified):
+            return "接下来可能朝确认方向推进。"
+
+        case (.narrowing, .english):
             return "Further clarification likely."
-        case .workingDiagnosis:
+        case (.narrowing, .chineseSimplified):
+            return "接下来可能会进一步澄清。"
+
+        case (.workingDiagnosis, .english):
             return "Treatment or confirmation likely."
-        case .monitoring:
+        case (.workingDiagnosis, .chineseSimplified):
+            return "接下来可能进入治疗或确认阶段。"
+
+        case (.monitoring, .english):
             return "Follow-up or observation likely."
-        case .reopened:
+        case (.monitoring, .chineseSimplified):
+            return "接下来可能继续随访或观察。"
+
+        case (.reopened, .english):
             return "Reassessment likely."
-        case .earlyExploration:
+        case (.reopened, .chineseSimplified):
+            return "接下来可能会重新评估。"
+
+        case (.earlyExploration, .english):
             return "More exploration likely."
-        case .mixed:
+        case (.earlyExploration, .chineseSimplified):
+            return "接下来可能继续探索。"
+
+        case (.mixed, .english):
             return "Direction still evolving."
+        case (.mixed, .chineseSimplified):
+            return "当前方向仍在演变中。"
         }
     }
 

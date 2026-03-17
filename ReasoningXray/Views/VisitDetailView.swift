@@ -11,6 +11,12 @@ struct VisitDetailView: View {
     private var displayLanguage: DisplayLanguage {
         store.renderPreferences.displayLanguage
     }
+    
+    private var debugLanguage: some View {
+        Text("LANG = \(displayLanguage == .english ? "EN" : "ZH")")
+            .font(.caption)
+            .foregroundColor(.red)
+    }
 
     private var currentThread: CaseThread? {
         store.threads.first { $0.id == visit.caseThreadId }
@@ -137,7 +143,7 @@ struct VisitDetailView: View {
                 "Why this visit happened",
                 rendered.reasonForVisit.resolve(for: displayLanguage)
             )
-
+            
             detailRow(
                 "What might be happening",
                 rendered.whatMightBeHappening.resolve(for: displayLanguage)

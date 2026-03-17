@@ -20,7 +20,22 @@ final class ReasoningHistoryStore: ObservableObject {
     
     @Published var visits: [Visit]
     @Published var threads: [CaseThread]
-    @Published var renderPreferences: ReasoningRenderPreferences = .englishDefault
+
+    @Published var displayLanguage: DisplayLanguage = .chineseSimplified
+    @Published var mirrorLanguageMode: MirrorLanguageMode = .sourceOnly
+    
+    var renderPreferences: ReasoningRenderPreferences {
+        get {
+            ReasoningRenderPreferences(
+                displayLanguage: displayLanguage,
+                mirrorLanguageMode: mirrorLanguageMode
+            )
+        }
+        set {
+            displayLanguage = newValue.displayLanguage
+            mirrorLanguageMode = newValue.mirrorLanguageMode
+        }
+    }
     
     private let renderer = ReasoningRenderer()
     private let detector = ReasoningChangeDetector()
@@ -43,6 +58,20 @@ final class ReasoningHistoryStore: ObservableObject {
             self.visits = MockReasoningData.visits
             self.threads = MockReasoningData.threads
         }
+    }
+    
+    func setDisplayLanguage(_ language: DisplayLanguage) {
+        renderPreferences = ReasoningRenderPreferences(
+            displayLanguage: language,
+            mirrorLanguageMode: renderPreferences.mirrorLanguageMode
+        )
+    }
+
+    func setMirrorLanguageMode(_ mode: MirrorLanguageMode) {
+        renderPreferences = ReasoningRenderPreferences(
+            displayLanguage: renderPreferences.displayLanguage,
+            mirrorLanguageMode: mode
+        )
     }
     
     func epistemicStatus(for comparison: VisitReasoningComparison) -> EpistemicStatus {
@@ -125,11 +154,15 @@ final class ReasoningHistoryStore: ObservableObject {
     func trajectorySummary(for threadID: UUID) -> CaseTrajectorySummary? {
         caseTrajectorySummaries.first { $0.threadID == threadID }
     }
-    
+
     func renderedVisitReasoning(for visit: Visit) -> RenderedVisitReasoning {
-        renderer.renderVisit(from: visit, preferences: renderPreferences)
+        return renderer.renderVisit(
+            from: visit,
+            threadID: visit.caseThreadId,
+            preferences: renderPreferences
+        )
     }
-    
+
     func exportState() -> State {
         State(
             threads: threads,
@@ -603,3 +636,4 @@ final class ReasoningHistoryStore: ObservableObject {
         fatalError("Replace comparisonsFallbackMovement() with a real ReasoningMovement case after checking the enum definition.")
     }
 }
+

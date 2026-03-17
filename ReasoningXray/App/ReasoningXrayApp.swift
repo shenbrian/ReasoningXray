@@ -6,7 +6,8 @@ struct ReasoningXrayApp: App {
 
     var body: some Scene {
         WindowGroup {
-            MainTabView(store: store)
+            MainTabView()
+                .environmentObject(store)
         }
     }
 }

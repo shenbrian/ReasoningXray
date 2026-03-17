@@ -7,6 +7,7 @@ struct CaseThreadsView: View {
         NavigationStack {
             ScrollView {
                 LazyVStack(spacing: 16) {
+        
                     ForEach(store.threads) { thread in
                         NavigationLink {
                             ThreadDetailView(thread: thread)
