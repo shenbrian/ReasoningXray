@@ -1,3 +1,5 @@
+Status: Superseded — Level6 temporal signal system abandoned
+
 🧭 ReasoningXray Level 6
 Temporal Phenomena Taxonomy (Scope Definition Layer)
 

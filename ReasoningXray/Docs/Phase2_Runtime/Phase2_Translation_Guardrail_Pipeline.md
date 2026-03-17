@@ -1,3 +1,5 @@
+Status: Candidate Canonical (await runtime audit)
+
 🧠 ReasoningXray Phase 2
 Translation Guardrail Pipeline
 (Language Layer Execution Architecture)

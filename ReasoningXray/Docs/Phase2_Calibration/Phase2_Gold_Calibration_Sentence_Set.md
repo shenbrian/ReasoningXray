@@ -1,3 +1,5 @@
+Status: Reference — pre-recovery design context
+
 🧠 ReasoningXray Phase 2
 Gold Calibration Sentence Set (Language Layer Wind-Tunnel)
 1. Purpose
