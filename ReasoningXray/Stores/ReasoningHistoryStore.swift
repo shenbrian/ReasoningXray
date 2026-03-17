@@ -11,6 +11,24 @@ struct VisitReasoningComparison: Identifiable {
     let turningPoint: ReasoningTurningPoint?
 }
 
+struct WatchpointPresentation {
+    let title: String
+    let body: String
+}
+
+struct ReasoningSignalPresentation: Identifiable {
+    let id = UUID()
+    let title: String
+    let body: String
+    let emphasis: ReasoningSignalEmphasis
+}
+
+enum ReasoningSignalEmphasis {
+    case neutral
+    case caution
+    case stable
+}
+
 final class ReasoningHistoryStore: ObservableObject {
     
     struct State: Codable {
@@ -21,18 +39,18 @@ final class ReasoningHistoryStore: ObservableObject {
     @Published var visits: [Visit]
     @Published var threads: [CaseThread]
 
-    @Published var displayLanguage: DisplayLanguage = .chineseSimplified
+    @Published var displayLanguage: DisplayLanguage = .english
     @Published var mirrorLanguageMode: MirrorLanguageMode = .sourceOnly
     
     var renderPreferences: ReasoningRenderPreferences {
         get {
             ReasoningRenderPreferences(
-                displayLanguage: displayLanguage,
+                displayLanguage: .english,
                 mirrorLanguageMode: mirrorLanguageMode
             )
         }
         set {
-            displayLanguage = newValue.displayLanguage
+            displayLanguage = .english
             mirrorLanguageMode = newValue.mirrorLanguageMode
         }
     }
@@ -58,20 +76,259 @@ final class ReasoningHistoryStore: ObservableObject {
             self.visits = MockReasoningData.visits
             self.threads = MockReasoningData.threads
         }
+
+        self.displayLanguage = .english
+        self.mirrorLanguageMode = .sourceOnly
+    }
+    
+    
+    func reasoningSignals(for thread: CaseThread) -> [ReasoningSignalPresentation] {
+        let posture = reasoningPosture(for: thread)
+        let watchpoints = watchpoints(for: thread)
+
+        var signals: [ReasoningSignalPresentation] = []
+
+        if posture.isProvisional {
+            signals.append(
+                ReasoningSignalPresentation(
+                    title: "Reasoning remains provisional",
+                    body: "The doctor’s thinking is still being worked through rather than treated as settled.",
+                    emphasis: .caution
+                )
+            )
+        }
+
+        if !watchpoints.isEmpty {
+            signals.append(
+                ReasoningSignalPresentation(
+                    title: "Watchpoints remain",
+                    body: "Some parts of the reasoning still need careful follow-through across visits.",
+                    emphasis: .caution
+                )
+            )
+        }
+
+        let stableText = (posture.title + " " + posture.summary).lowercased()
+        if stableText.contains("stable") || stableText.contains("consistent") {
+            signals.append(
+                ReasoningSignalPresentation(
+                    title: "Reasoning stayed broadly stable",
+                    body: "The overall line of thinking appears broadly consistent across the visit sequence.",
+                    emphasis: .stable
+                )
+            )
+        } else {
+            signals.append(
+                ReasoningSignalPresentation(
+                    title: "Reasoning evolved",
+                    body: "The doctor’s line of thinking appears to have developed or shifted across visits.",
+                    emphasis: .neutral
+                )
+            )
+        }
+
+        return Array(signals.prefix(4))
+    }
+    
+    func reasoningConsistencySummary(for thread: CaseThread) -> String {
+        let posture = reasoningPosture(for: thread)
+        let watchpoints = watchpoints(for: thread)
+
+        let text = (posture.title + " " + posture.summary).lowercased()
+
+        if posture.isProvisional {
+            return "Across visits, the doctor’s reasoning has remained provisional rather than being presented as settled."
+        }
+
+        if text.contains("stable") || text.contains("consistent") {
+            return "Across visits, the overall line of reasoning has remained broadly consistent."
+        }
+
+        if !watchpoints.isEmpty {
+            return "Across visits, some parts of the reasoning have continued to need careful follow-through."
+        }
+
+        return "Across visits, the doctor’s reasoning appears to have developed or shifted."
+    }
+    
+    func visitCountSummary(for thread: CaseThread) -> String {
+        let count = visits.filter { $0.caseThreadId == thread.id }.count
+
+        switch count {
+        case 0:
+            return "This thread does not yet show linked clinical visits."
+        case 1:
+            return "This reasoning view reflects 1 clinical visit."
+        default:
+            return "This reasoning view reflects \(count) clinical visits."
+        }
+    }
+    
+    func reasoningEvidenceStatus(for thread: CaseThread) -> ReasoningEvidenceStatus {
+        let comps = comparisons(for: thread)
+
+        guard !comps.isEmpty else {
+            return ReasoningEvidenceStatus(
+                title: "Evidence status",
+                body: "No reasoning pattern has been established yet."
+            )
+        }
+
+        if comps.count == 1 {
+            return ReasoningEvidenceStatus(
+                title: "Evidence status",
+                body: "Only one visit is available, so the reasoning pattern is still early."
+            )
+        }
+
+        let turningPoints = comps.compactMap(\.turningPoint)
+
+        if !turningPoints.isEmpty {
+            return ReasoningEvidenceStatus(
+                title: "Evidence status",
+                body: "The explanation shifted across visits as new information appeared."
+            )
+        }
+
+        if let trajectory = trajectorySummary(for: thread.id), trajectory.activeUncertainty {
+            return ReasoningEvidenceStatus(
+                title: "Evidence status",
+                body: "The reasoning pattern is visible, but some uncertainty still remains."
+            )
+        }
+
+        return ReasoningEvidenceStatus(
+            title: "Evidence status",
+            body: "The reasoning appears to have become more stable across visits."
+        )
+    }
+    
+    func reasoningPosture(for thread: CaseThread) -> ReasoningPosture {
+        let threadVisits = visits(for: thread)
+
+        if threadVisits.count <= 1 {
+            return ReasoningPosture(
+                title: "Early hypothesis",
+                summary: "The doctor’s explanation is still being formed from the available information.",
+                isProvisional: true
+            )
+        }
+
+        return ReasoningPosture(
+            title: "Working explanation",
+            summary: "This shows the doctor’s current leading explanation across visits. It should be read as evolving clinical reasoning, not a final conclusion.",
+            isProvisional: true
+        )
+    }
+    
+    func reasoningUncertaintyNote(for thread: CaseThread) -> ReasoningUncertaintyNote? {
+        let threadVisits = visits(for: thread)
+        let trajectory = trajectorySummary(for: thread.id)
+        let hasTurningPoint = !comparisons(for: thread).compactMap(\.turningPoint).isEmpty
+
+        if threadVisits.count <= 1 {
+            return ReasoningUncertaintyNote(
+                title: "Uncertainty remains",
+                body: "This is still an early stage explanation, so the clinical picture may become clearer over time."
+            )
+        }
+
+        if let trajectory, trajectory.activeUncertainty {
+            return ReasoningUncertaintyNote(
+                title: "Uncertainty remains",
+                body: "Some uncertainty still remains in how the reasoning fits together, so this should not be read as fully settled."
+            )
+        }
+
+        if hasTurningPoint {
+            return ReasoningUncertaintyNote(
+                title: "Reasoning is still evolving",
+                body: "The explanation appears to have shifted across visits, which means the reasoning may still be developing."
+            )
+        }
+
+        return ReasoningUncertaintyNote(
+            title: "Clinical interpretation remains provisional",
+            body: "This reflects the doctor’s current reasoning across visits, but some uncertainty may still remain until follow-up is complete."
+        )
+    }
+    
+    func workingExplanationSummary(for threadID: UUID) -> String? {
+        guard let thread = threads.first(where: { $0.id == threadID }) else {
+            return nil
+        }
+
+        guard let explanation = workingExplanation(for: thread) else {
+            return nil
+        }
+
+        let raw = String(describing: explanation).lowercased()
+
+        if raw.contains("airway") || raw.contains("asthma") {
+            return "The current working explanation appears to be leaning toward an airway-related cause."
+        }
+
+        if raw.contains("infection") || raw.contains("viral") || raw.contains("bacterial") {
+            return "The current working explanation still appears to include an infection-related cause."
+        }
+
+        if raw.contains("blood pressure") || raw.contains("hypertension") {
+            return "The current working explanation appears to remain focused on blood pressure."
+        }
+
+        if raw.contains("urinary") || raw.contains("uti") || raw.contains("bladder") {
+            return "The current working explanation appears to remain focused on a urinary cause."
+        }
+
+        return "A working explanation appears to be forming, but it is not yet fully settled."
+    }
+    
+    func recentTurningPointSummary(for threadID: UUID) -> String? {
+        guard let thread = threads.first(where: { $0.id == threadID }) else {
+            return nil
+        }
+
+        let comps = comparisons(for: thread)
+
+        guard let turningPoint = comps.compactMap(\.turningPoint).last else {
+            return nil
+        }
+
+        return readableTurningPointSummary(for: turningPoint)
+    }
+
+    private func readableTurningPointSummary(for turningPoint: ReasoningTurningPoint) -> String {
+        let raw = String(describing: turningPoint).lowercased()
+
+        if raw.contains("hypothesis") || raw.contains("reconsider") || raw.contains("revision") {
+            return "The doctor appears to have reconsidered the earlier explanation."
+        }
+
+        if raw.contains("test") || raw.contains("result") || raw.contains("investigation") {
+            return "New test information appears to have shifted the reasoning."
+        }
+
+        if raw.contains("narrow") || raw.contains("focus") {
+            return "The reasoning appears to have narrowed toward a more specific explanation."
+        }
+
+        if raw.contains("confirm") || raw.contains("confidence") {
+            return "The reasoning appears to have moved toward a more confident explanation."
+        }
+
+        if raw.contains("monitor") || raw.contains("follow") {
+            return "The doctor’s reasoning appears to have shifted into closer monitoring."
+        }
+
+        return "The doctor’s reasoning appears to have shifted at this stage."
     }
     
     func setDisplayLanguage(_ language: DisplayLanguage) {
-        renderPreferences = ReasoningRenderPreferences(
-            displayLanguage: language,
-            mirrorLanguageMode: renderPreferences.mirrorLanguageMode
-        )
+        displayLanguage = .english
     }
 
     func setMirrorLanguageMode(_ mode: MirrorLanguageMode) {
-        renderPreferences = ReasoningRenderPreferences(
-            displayLanguage: renderPreferences.displayLanguage,
-            mirrorLanguageMode: mode
-        )
+        mirrorLanguageMode = mode
     }
     
     func epistemicStatus(for comparison: VisitReasoningComparison) -> EpistemicStatus {
@@ -155,8 +412,20 @@ final class ReasoningHistoryStore: ObservableObject {
         caseTrajectorySummaries.first { $0.threadID == threadID }
     }
 
+    func trajectoryPresentation(for threadID: UUID) -> CaseTrajectoryPresentation? {
+        caseTrajectoryPresentations.first { $0.technical.threadID == threadID }
+    }
+
+    func reasoningSignalSummary(for threadID: UUID) -> String? {
+        guard let presentation = trajectoryPresentation(for: threadID) else {
+            return nil
+        }
+
+        return "\(presentation.technical.overallPath.rawValue) • \(presentation.technical.certaintyTrend.rawValue)"
+    }
+
     func renderedVisitReasoning(for visit: Visit) -> RenderedVisitReasoning {
-        return renderer.renderVisit(
+        renderer.renderVisit(
             from: visit,
             threadID: visit.caseThreadId,
             preferences: renderPreferences
@@ -173,11 +442,71 @@ final class ReasoningHistoryStore: ObservableObject {
     func importState(_ state: State) {
         threads = state.threads
         visits = state.visits
+        displayLanguage = .english
+        mirrorLanguageMode = .sourceOnly
     }
     
     func watchpoints(for thread: CaseThread) -> [ReasoningWatchpoint] {
         let comps = comparisons(for: thread)
         return watchpointDetector.detect(for: comps, thread: thread)
+    }
+    
+    func watchpointPresentation(for watchpoint: ReasoningWatchpoint) -> WatchpointPresentation {
+        let raw = String(describing: watchpoint).lowercased()
+
+        if raw.contains("turning") {
+            return WatchpointPresentation(
+                title: "Turning Point",
+                body: "The doctor’s reasoning appears to have shifted at this stage."
+            )
+        }
+
+        if raw.contains("reconsider") || raw.contains("revision") || raw.contains("changed") {
+            return WatchpointPresentation(
+                title: "Reconsidered Explanation",
+                body: "The earlier explanation may have been revised as new information appeared."
+            )
+        }
+
+        if raw.contains("uncertain") || raw.contains("uncertainty") {
+            return WatchpointPresentation(
+                title: "Uncertainty Remains",
+                body: "Some uncertainty still remains, so the reasoning is not fully settled yet."
+            )
+        }
+
+        if raw.contains("monitor") || raw.contains("follow") {
+            return WatchpointPresentation(
+                title: "Monitoring Signal",
+                body: "The doctor appears to be watching how things develop before deciding further."
+            )
+        }
+
+        if raw.contains("test") || raw.contains("investigation") {
+            return WatchpointPresentation(
+                title: "Further Checking",
+                body: "Additional checking appears relevant to make the picture clearer."
+            )
+        }
+
+        if raw.contains("working") || raw.contains("narrow") {
+            return WatchpointPresentation(
+                title: "Narrowing Explanation",
+                body: "The doctor’s thinking appears to be focusing toward a more specific explanation."
+            )
+        }
+
+        if raw.contains("confirm") {
+            return WatchpointPresentation(
+                title: "Growing Confidence",
+                body: "The reasoning appears to be moving toward a more confident explanation."
+            )
+        }
+
+        return WatchpointPresentation(
+            title: "Reasoning Signal",
+            body: "This part of the case drew closer reasoning attention from the doctor."
+        )
     }
     
     func reasoningShift(for thread: CaseThread) -> ReasoningShift? {
@@ -404,6 +733,22 @@ final class ReasoningHistoryStore: ObservableObject {
         return labels.joined(separator: " → ")
     }
     
+    func reasoningTimelineStrip(for threadID: UUID) -> [String] {
+        guard let thread = threads.first(where: { $0.id == threadID }) else {
+            return []
+        }
+
+        let items = [
+            timelineSummary(for: thread),
+            stageSummary(for: thread),
+            turningPointSummary(for: thread)
+        ]
+
+        return items.filter {
+            !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+    }
+    
     var caseTrajectorySummaries: [CaseTrajectorySummary] {
         threads.compactMap { thread -> CaseTrajectorySummary? in
             let comparisons = buildComparisons(for: thread)
@@ -431,10 +776,6 @@ final class ReasoningHistoryStore: ObservableObject {
                 epistemicStatus: trustSignalMapper.trajectoryStatus(for: trajectory)
             )
         }
-    }
-
-    func trajectoryPresentation(for threadID: UUID) -> CaseTrajectoryPresentation? {
-        caseTrajectoryPresentations.first { $0.technical.threadID == threadID }
     }
     
     private func stageProgress(_ stage: ReasoningStage) -> Int {
@@ -636,4 +977,3 @@ final class ReasoningHistoryStore: ObservableObject {
         fatalError("Replace comparisonsFallbackMovement() with a real ReasoningMovement case after checking the enum definition.")
     }
 }
-
