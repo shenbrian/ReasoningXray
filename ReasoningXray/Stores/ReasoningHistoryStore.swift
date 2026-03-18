@@ -117,6 +117,66 @@ final class ReasoningHistoryStore: ObservableObject {
         self.mirrorLanguageMode = .sourceOnly
     }
     
+    func reasoningDirectionPresentation(for threadID: UUID) -> ReasoningDirectionPresentation? {
+
+        guard let thread = threads.first(where: { $0.id == threadID }) else {
+            return nil
+        }
+
+        let threadVisits = thread.visitIds
+            .compactMap { id in visits.first(where: { $0.id == id }) }
+            .sorted { $0.visitDate < $1.visitDate }
+
+        guard let latest = threadVisits.last else {
+            return nil
+        }
+
+        let changeText = latest.mainChangeSinceLastVisit.lowercased()
+
+        // Moving Toward Clearer Understanding
+        if changeText.contains("clearer") ||
+           changeText.contains("more certain") ||
+           changeText.contains("narrow") ||
+           changeText.contains("focused") {
+
+            return ReasoningDirectionPresentation(
+                title: "Thinking is becoming more focused",
+                explanation: "Compared with the previous visit, the doctor's understanding appears to be becoming more specific. This often means some possible causes are becoming less likely while attention is concentrating on the most relevant explanations."
+            )
+        }
+
+        // Exploring New Possibilities
+        if changeText.contains("new") ||
+           changeText.contains("another") ||
+           changeText.contains("different") ||
+           changeText.contains("broaden") ||
+           changeText.contains("expand") {
+
+            return ReasoningDirectionPresentation(
+                title: "New possibilities are being explored",
+                explanation: "The doctor's thinking has widened to consider additional explanations. This can happen when earlier ideas have not fully explained the situation or when new information becomes available."
+            )
+        }
+
+        // Becoming More Uncertain
+        if changeText.contains("uncertain") ||
+           changeText.contains("less clear") ||
+           changeText.contains("conflicting") ||
+           changeText.contains("not sure") {
+
+            return ReasoningDirectionPresentation(
+                title: "The situation is currently less clear",
+                explanation: "Recent information has made the picture less certain than before. This does not mean progress has stopped, but it may mean further observation or testing is needed."
+            )
+        }
+
+        // Default — Largely Unchanged
+        return ReasoningDirectionPresentation(
+            title: "Thinking remains broadly unchanged",
+            explanation: "There has not been a major shift in the doctor's reasoning since the previous visit. This often reflects a period of monitoring or waiting for further information before clearer conclusions can be made."
+        )
+    }
+    
     func longitudinalContinuityPresentation(for thread: CaseThread) -> LongitudinalContinuityPresentation? {
         guard let latestComparison = comparisons(for: thread).last else {
             return nil
