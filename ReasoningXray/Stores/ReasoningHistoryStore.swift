@@ -54,11 +54,6 @@ struct ContinuityStepPresentation: Identifiable {
     let emphasis: ReasoningSignalEmphasis
 }
 
-struct ReasoningDirectionPresentation {
-    let title: String
-    let explanation: String
-}
-
 enum ReasoningSignalEmphasis {
     case neutral
     case caution
@@ -115,66 +110,6 @@ final class ReasoningHistoryStore: ObservableObject {
         
         self.displayLanguage = .english
         self.mirrorLanguageMode = .sourceOnly
-    }
-    
-    func reasoningDirectionPresentation(for threadID: UUID) -> ReasoningDirectionPresentation? {
-
-        guard let thread = threads.first(where: { $0.id == threadID }) else {
-            return nil
-        }
-
-        let threadVisits = thread.visitIds
-            .compactMap { id in visits.first(where: { $0.id == id }) }
-            .sorted { $0.visitDate < $1.visitDate }
-
-        guard let latest = threadVisits.last else {
-            return nil
-        }
-
-        let changeText = latest.mainChangeSinceLastVisit.lowercased()
-
-        // Moving Toward Clearer Understanding
-        if changeText.contains("clearer") ||
-           changeText.contains("more certain") ||
-           changeText.contains("narrow") ||
-           changeText.contains("focused") {
-
-            return ReasoningDirectionPresentation(
-                title: "Thinking is becoming more focused",
-                explanation: "Compared with the previous visit, the doctor's understanding appears to be becoming more specific. This often means some possible causes are becoming less likely while attention is concentrating on the most relevant explanations."
-            )
-        }
-
-        // Exploring New Possibilities
-        if changeText.contains("new") ||
-           changeText.contains("another") ||
-           changeText.contains("different") ||
-           changeText.contains("broaden") ||
-           changeText.contains("expand") {
-
-            return ReasoningDirectionPresentation(
-                title: "New possibilities are being explored",
-                explanation: "The doctor's thinking has widened to consider additional explanations. This can happen when earlier ideas have not fully explained the situation or when new information becomes available."
-            )
-        }
-
-        // Becoming More Uncertain
-        if changeText.contains("uncertain") ||
-           changeText.contains("less clear") ||
-           changeText.contains("conflicting") ||
-           changeText.contains("not sure") {
-
-            return ReasoningDirectionPresentation(
-                title: "The situation is currently less clear",
-                explanation: "Recent information has made the picture less certain than before. This does not mean progress has stopped, but it may mean further observation or testing is needed."
-            )
-        }
-
-        // Default — Largely Unchanged
-        return ReasoningDirectionPresentation(
-            title: "Thinking remains broadly unchanged",
-            explanation: "There has not been a major shift in the doctor's reasoning since the previous visit. This often reflects a period of monitoring or waiting for further information before clearer conclusions can be made."
-        )
     }
     
     func longitudinalContinuityPresentation(for thread: CaseThread) -> LongitudinalContinuityPresentation? {
@@ -1278,23 +1213,23 @@ final class ReasoningHistoryStore: ObservableObject {
     
     private func patientTrajectorySummary(for comparison: VisitReasoningComparison) -> String {
         let movement = String(describing: comparison.movement).lowercased()
-        
+
         if movement.contains("stable") || movement.contains("steady") {
             return "Across recent visits, the reasoning appears broadly steady rather than sharply changing."
         }
-        
+
         if movement.contains("refin") || movement.contains("narrow") || movement.contains("focus") {
             return "Across recent visits, the reasoning appears to be refining rather than reversing."
         }
-        
+
         if movement.contains("diverg") || movement.contains("broad") || movement.contains("widen") {
             return "Across recent visits, the reasoning appears to be keeping more than one explanation open."
         }
-        
+
         if movement.contains("redirect") || movement.contains("shift") || movement.contains("change") {
             return "Across recent visits, the reasoning appears to be shifting direction in a meaningful way."
         }
-        
+
         return "Across recent visits, the reasoning appears to be developing, though the overall direction is still provisional."
     }
     
@@ -1313,23 +1248,23 @@ final class ReasoningHistoryStore: ObservableObject {
     
     private func continuitySummary(for comparison: VisitReasoningComparison) -> String {
         let movement = String(describing: comparison.movement).lowercased()
-        
+
         if movement.contains("stable") || movement.contains("steady") {
             return "The line of reasoning is carrying forward with relatively little change."
         }
-        
+
         if movement.contains("refin") || movement.contains("narrow") || movement.contains("focus") {
             return "The line of reasoning is carrying forward, but with clearer narrowing or sharpening."
         }
-        
+
         if movement.contains("diverg") || movement.contains("broad") || movement.contains("widen") {
             return "The line of reasoning is carrying forward while still holding multiple possibilities open."
         }
-        
+
         if movement.contains("redirect") || movement.contains("shift") || movement.contains("change") {
             return "The line of reasoning is not simply continuing forward; it is being reoriented."
         }
-        
+
         return "The line of reasoning is still developing across visits."
     }
     
@@ -1345,28 +1280,35 @@ final class ReasoningHistoryStore: ObservableObject {
         if let turningPoint = comparison.turningPoint {
             return readableTurningPointSummary(for: turningPoint)
         }
-        
+
         let movement = String(describing: comparison.movement).lowercased()
-        
+
         if movement.contains("stable") || movement.contains("steady") {
             return "No major directional shift stands out across the most recent visits."
         }
-        
+
         if movement.contains("refin") || movement.contains("narrow") || movement.contains("focus") {
             return "The reasoning has become more focused without clearly breaking from the earlier line."
         }
-        
+
         if movement.contains("diverg") || movement.contains("broad") || movement.contains("widen") {
             return "The reasoning remains open enough that more than one path is still being considered."
         }
-        
+
         if movement.contains("redirect") || movement.contains("shift") || movement.contains("change") {
             return "The reasoning appears to have moved toward a different interpretive direction."
         }
-        
+
         return "The reasoning is still developing across visits."
     }
-
+    
+    private func evidenceSummary(for comparison: VisitReasoningComparison) -> String {
+        if comparison.changes.contains(where: { "\($0.kind)".lowercased().contains("evidence") }) {
+            return "The current reasoning depends meaningfully on the evidence available so far."
+        } else {
+            return "The current reasoning is not resting on one isolated data point alone."
+        }
+    }
     
     private func evidenceAcrossVisits(for comparison: VisitReasoningComparison) -> String {
         switch comparison.stage {
@@ -1396,16 +1338,16 @@ final class ReasoningHistoryStore: ObservableObject {
     
     private func emphasis(for comparison: VisitReasoningComparison) -> ReasoningSignalEmphasis {
         let movement = String(describing: comparison.movement).lowercased()
-        
+
         if movement.contains("stable") || movement.contains("steady") {
             return .stable
         }
-        
+
         if movement.contains("redirect") || movement.contains("shift") || movement.contains("change") ||
             movement.contains("diverg") || movement.contains("broad") || movement.contains("widen") {
             return .caution
         }
-        
+
         return .neutral
     }
     
@@ -1421,14 +1363,6 @@ final class ReasoningHistoryStore: ObservableObject {
             return .neutral
         case .confirmation:
             return .stable
-        }
-    }
-    
-    private func evidenceSummary(for comparison: VisitReasoningComparison) -> String {
-        if comparison.changes.contains(where: { "\($0.kind)".lowercased().contains("evidence") }) {
-            return "The current reasoning depends meaningfully on the evidence available so far."
-        } else {
-            return "The current reasoning is not resting on one isolated data point alone."
         }
     }
     

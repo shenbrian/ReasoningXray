@@ -15,7 +15,6 @@ struct ThreadDetailView: View {
                 headerSection
                 reasoningMirrorPanel
                 trajectorySection
-                reasoningDirectionSection   // ← NEW
                 continuitySection
                 watchpointsSection
             }
@@ -329,29 +328,6 @@ private extension ThreadDetailView {
                     }
                 }
             }
-        }
-    }
-    
-    var reasoningDirectionSection: some View {
-        if let presentation = store.reasoningDirectionPresentation(for: thread.id) {
-            return AnyView(
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Reasoning direction")
-                        .font(.headline)
-
-                    Text(presentation.title)
-                        .font(.subheadline.weight(.semibold))
-
-                    Text(presentation.explanation)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                .padding()
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
-            )
-        } else {
-            return AnyView(EmptyView())
         }
     }
 
