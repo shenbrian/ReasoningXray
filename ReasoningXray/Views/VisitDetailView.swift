@@ -9,11 +9,23 @@ struct VisitDetailView: View {
     }
 
     private var displayLanguage: DisplayLanguage {
-        store.renderPreferences.displayLanguage
+        store.displayLanguage
     }
-    
+
+    private var isChinese: Bool {
+        String(describing: displayLanguage).lowercased().contains("chinese")
+    }
+
+    private var isEnglish: Bool {
+        !isChinese
+    }
+
+    private func ui(_ english: String, _ chinese: String) -> String {
+        isChinese ? chinese : english
+    }
+
     private var debugLanguage: some View {
-        Text("LANG = \(displayLanguage == .english ? "EN" : "ZH")")
+        Text(ui("LANG = EN", "LANG = ZH"))
             .font(.caption)
             .foregroundColor(.red)
     }
@@ -29,11 +41,17 @@ struct VisitDetailView: View {
 
     private var whatChangedSinceLastVisitText: String {
         guard let comparison = currentComparison else {
-            return "This is the first recorded visit for this issue."
+            return ui(
+                "This is the first recorded visit for this issue.",
+                "这是该问题第一次被记录的就诊。"
+            )
         }
 
         if comparison.changes.isEmpty {
-            return "No major reasoning change was detected from the previous visit."
+            return ui(
+                "No major reasoning change was detected from the previous visit.",
+                "与上一次就诊相比，没有发现明显的判断变化。"
+            )
         }
 
         let changeTexts = comparison.changes.map { changeSummary(for: $0.kind) }
@@ -43,12 +61,17 @@ struct VisitDetailView: View {
         }
 
         if changeTexts.count == 2 {
-            return "\(changeTexts[0]) and \(changeTexts[1])."
+            return isChinese
+                ? "\(changeTexts[0])，并且\(changeTexts[1])。"
+                : "\(changeTexts[0]) and \(changeTexts[1])."
         }
 
-        let head = changeTexts.dropLast().joined(separator: ", ")
+        let head = changeTexts.dropLast().joined(separator: isChinese ? "，" : ", ")
         let tail = changeTexts.last ?? ""
-        return "\(head), and \(tail)."
+
+        return isChinese
+            ? "\(head)，并且\(tail)。"
+            : "\(head), and \(tail)."
     }
 
     var body: some View {
@@ -68,7 +91,7 @@ struct VisitDetailView: View {
 
     private var languageDebugSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Display Language")
+            Text(ui("Display Language", "显示语言"))
                 .font(.title3.bold())
 
             HStack(spacing: 12) {
@@ -80,9 +103,9 @@ struct VisitDetailView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
                         .background(
-                            displayLanguage == .english ? Color.blue.opacity(0.18) : Color.secondary.opacity(0.10)
+                            isEnglish ? Color.blue.opacity(0.18) : Color.secondary.opacity(0.10)
                         )
-                        .foregroundStyle(displayLanguage == .english ? Color.blue : Color.primary)
+                        .foregroundStyle(isEnglish ? Color.blue : Color.primary)
                         .clipShape(RoundedRectangle(cornerRadius: 10))
                 }
                 .buttonStyle(.plain)
@@ -95,19 +118,19 @@ struct VisitDetailView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
                         .background(
-                            displayLanguage == .chineseSimplified ? Color.blue.opacity(0.18) : Color.secondary.opacity(0.10)
+                            isChinese ? Color.blue.opacity(0.18) : Color.secondary.opacity(0.10)
                         )
-                        .foregroundStyle(displayLanguage == .chineseSimplified ? Color.blue : Color.primary)
+                        .foregroundStyle(isChinese ? Color.blue : Color.primary)
                         .clipShape(RoundedRectangle(cornerRadius: 10))
                 }
                 .buttonStyle(.plain)
             }
 
-            Text("Current language: \(displayLanguage == .english ? "English" : "Chinese")")
+            Text(ui("Current language: English", "当前语言：中文"))
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            Text("Temporary debug toggle for bilingual rendering.")
+            Text(ui("Temporary debug toggle for bilingual rendering.", "用于双语显示测试的临时调试切换。"))
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -118,12 +141,11 @@ struct VisitDetailView: View {
 
     private var changeSummarySection: some View {
         VStack(alignment: .leading, spacing: 12) {
-
-            Text("Compared with the previous visit")
+            Text(ui("Compared with the previous visit", "与上一次就诊相比"))
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            Text("What changed since last visit")
+            Text(ui("What changed since last visit", "自上次就诊后有什么变化"))
                 .font(.title3.bold())
 
             Text(whatChangedSinceLastVisitText)
@@ -136,36 +158,36 @@ struct VisitDetailView: View {
 
     private var layer2Section: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("What This Means For You")
+            Text(ui("What This Means For You", "这对你的意义"))
                 .font(.title3.bold())
 
             detailRow(
-                "Why this visit happened",
+                ui("Why this visit happened", "这次就诊为什么发生"),
                 rendered.reasonForVisit.resolve(for: displayLanguage)
             )
-            
+
             detailRow(
-                "What might be happening",
+                ui("What might be happening", "目前可能是什么情况"),
                 rendered.whatMightBeHappening.resolve(for: displayLanguage)
             )
 
             detailRow(
-                "What this suggests",
+                ui("What this suggests", "这提示什么"),
                 rendered.howSeriousItAppears.resolve(for: displayLanguage)
             )
 
             detailRow(
-                "What the doctor is doing",
+                ui("What the doctor is doing", "医生目前在做什么"),
                 rendered.whatTheDoctorIsDoing.resolve(for: displayLanguage)
             )
 
             detailRow(
-                "What happens next",
+                ui("What happens next", "接下来会怎样"),
                 rendered.whatHappensNext.resolve(for: displayLanguage)
             )
 
             detailList(
-                "Questions for next visit",
+                ui("Questions for next visit", "下次就诊可问的问题"),
                 rendered.questionsForNextVisit.map { $0.resolve(for: displayLanguage) }
             )
         }
@@ -176,31 +198,31 @@ struct VisitDetailView: View {
 
     private var layer1Section: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Doctor Reasoning Mirror")
+            Text(ui("Doctor Reasoning Mirror", "医生推理镜像"))
                 .font(.title3.bold())
 
             detailRow(
-                "Reason for visit",
+                ui("Reason for visit", "就诊原因"),
                 rendered.reasonForVisit.resolve(for: displayLanguage)
             )
 
             detailRow(
-                "Doctor explanation",
+                ui("Doctor explanation", "医生的解释"),
                 rendered.doctorExplanation.resolve(for: displayLanguage)
             )
 
             detailList(
-                "Evidence",
+                ui("Evidence", "依据"),
                 rendered.evidence.map { $0.resolve(for: displayLanguage) }
             )
 
             detailRow(
-                "Decision",
+                ui("Decision", "当前决定"),
                 rendered.decision.resolve(for: displayLanguage)
             )
 
             detailList(
-                "Next steps",
+                ui("Next steps", "下一步"),
                 rendered.nextSteps.map { $0.resolve(for: displayLanguage) }
             )
         }
@@ -211,16 +233,43 @@ struct VisitDetailView: View {
 
     private var additionalSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("What Changed Since Last Visit")
+            Text(ui("What Changed Since Last Visit", "自上次就诊后的变化"))
                 .font(.title3.bold())
 
-            detailRow("Main change since last visit", visit.mainChangeSinceLastVisit)
-            detailRow("What triggered the reasoning change", reasoningTriggerText)
-            detailRow("Biggest open question", visit.biggestOpenQuestion)
-            detailRow("What to watch before next visit", visit.whatToWatchBeforeNextVisit)
-            detailList("Symptoms mentioned", visit.symptomsMentioned)
-            detailList("Tests ordered", visit.testsOrdered)
-            detailList("Diagnoses considered", visit.diagnosesConsidered)
+            detailRow(
+                ui("Main change since last visit", "与上次相比的主要变化"),
+                rendered.mainChangeSinceLastVisit.resolve(for: displayLanguage)
+            )
+
+            detailRow(
+                ui("What triggered the reasoning change", "是什么促使判断发生变化"),
+                reasoningTriggerText
+            )
+
+            detailRow(
+                ui("Biggest open question", "目前最大的未决问题"),
+                rendered.biggestOpenQuestion.resolve(for: displayLanguage)
+            )
+
+            detailRow(
+                ui("What to watch before next visit", "下次就诊前需要留意什么"),
+                rendered.whatToWatchBeforeNextVisit.resolve(for: displayLanguage)
+            )
+
+            detailList(
+                ui("Symptoms mentioned", "提到的症状"),
+                translatedItems(visit.symptomsMentioned)
+            )
+
+            detailList(
+                ui("Tests ordered", "已安排的检查"),
+                translatedItems(visit.testsOrdered)
+            )
+
+            detailList(
+                ui("Diagnoses considered", "考虑过的诊断"),
+                translatedItems(visit.diagnosesConsidered)
+            )
         }
         .padding()
         .background(.thinMaterial)
@@ -229,38 +278,68 @@ struct VisitDetailView: View {
 
     private var reasoningTriggerText: String {
         if !visit.testsOrdered.isEmpty {
-            return "Testing influenced the reasoning change."
+            return ui(
+                "Testing influenced the reasoning change.",
+                "检查结果影响了医生判断的变化。"
+            )
         }
 
         let evidenceText = visit.evidence.joined(separator: " ").lowercased()
 
         if evidenceText.contains("improvement") || evidenceText.contains("response") {
-            return "Treatment response influenced the reasoning change."
+            return ui(
+                "Treatment response influenced the reasoning change.",
+                "治疗后的反应影响了医生判断的变化。"
+            )
         }
 
         if evidenceText.contains("persist") || evidenceText.contains("still present") || evidenceText.contains("wors") {
-            return "Ongoing symptoms influenced the reasoning change."
+            return ui(
+                "Ongoing symptoms influenced the reasoning change.",
+                "持续存在的症状影响了医生判断的变化。"
+            )
         }
 
         if !visit.evidence.isEmpty {
-            return "New evidence influenced the reasoning change."
+            return ui(
+                "New evidence influenced the reasoning change.",
+                "新的信息影响了医生判断的变化。"
+            )
         }
 
-        return "The doctor's updated assessment influenced the reasoning change."
+        return ui(
+            "The doctor's updated assessment influenced the reasoning change.",
+            "医生更新后的评估影响了判断的变化。"
+        )
     }
 
     private func changeSummary(for kind: ReasoningChangeKind) -> String {
         switch kind {
         case .continuedMonitoring:
-            return "The doctor continued monitoring the problem"
+            return ui(
+                "The doctor continued monitoring the problem",
+                "医生继续观察这个问题"
+            )
         case .reconsideredExplanation:
-            return "The doctor reconsidered the earlier explanation"
+            return ui(
+                "The doctor reconsidered the earlier explanation",
+                "医生重新考虑了先前的解释"
+            )
         case .orderedTesting:
-            return "The doctor moved to testing"
+            return ui(
+                "The doctor moved to testing",
+                "医生转向进一步检查"
+            )
         case .startedTreatmentTrial:
-            return "The doctor started a treatment trial"
+            return ui(
+                "The doctor started a treatment trial",
+                "医生开始尝试治疗"
+            )
         case .newEvidenceInfluencedReasoning:
-            return "New information affected the doctor's thinking"
+            return ui(
+                "New information affected the doctor's thinking",
+                "新信息影响了医生的判断"
+            )
         }
     }
 
@@ -270,10 +349,23 @@ struct VisitDetailView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            Text(value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Not recorded" : value)
+            Text(
+                value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    ? ui("Not recorded", "未记录")
+                    : value
+            )
         }
     }
 
+    private func translateRaw(_ text: String) -> String {
+        guard isChinese else { return text }
+        return ClinicalFaithfulTranslator().translate(text)
+    }
+
+    private func translatedItems(_ items: [String]) -> [String] {
+        items.map { translateRaw($0) }
+    }
+    
     private func detailList(_ title: String, _ items: [String]) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
@@ -285,7 +377,7 @@ struct VisitDetailView: View {
                 .filter { !$0.isEmpty }
 
             if cleaned.isEmpty {
-                Text("None")
+                Text(ui("None", "无"))
                     .foregroundStyle(.secondary)
             } else {
                 ForEach(Array(cleaned.enumerated()), id: \.offset) { _, item in

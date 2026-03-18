@@ -15,6 +15,20 @@ enum TrajectoryState: String, Codable {
     case confirmation
 }
 
+enum CertaintyState: String, Codable {
+    case activeUncertainty
+    case emergingClarity
+    case workingExplanation
+    case stabilizingUnderstanding
+}
+
+enum ExpectationState: String, Codable {
+    case clarityMayIncrease
+    case moreInformationNeeded
+    case followUpMatters
+    case noImmediateResolutionExpected
+}
+
 enum GuardrailDecision: String, Codable {
     case pass
     case rewrite
@@ -31,16 +45,32 @@ struct ScoreEnvelope: Codable {
     }
 }
 
+enum SemanticRole: String, Codable {
+    case evidence
+    case decision
+    case nextStep
+    case explanation
+    case summary
+    case expectation
+}
+
 struct SignalCarrier: Identifiable, Codable {
     let id: String
     let sourceText: String
     let domains: [EpistemicDomain]
     let trajectoryState: TrajectoryState
+    let certaintyState: CertaintyState
+    let expectationState: ExpectationState?
+    let semanticRole: SemanticRole
 
     let certaintyEnvelope: ScoreEnvelope
     let temporalEnvelope: ScoreEnvelope
     let authorityEnvelope: ScoreEnvelope
     let emotionalEnvelope: ScoreEnvelope
+
+    var semanticSignature: String {
+        "\(trajectoryState.rawValue)-\(certaintyState.rawValue)-\(expectationState?.rawValue ?? "nil")-\(semanticRole.rawValue)"
+    }
 }
 
 struct EpistemicScore: Codable {

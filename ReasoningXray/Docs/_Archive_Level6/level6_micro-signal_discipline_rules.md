@@ -1,3 +1,5 @@
+Status: Superseded — Level6 temporal signal system abandoned
+
 🔒 Micro-Signal Discipline Rules (Critical)
 Rule 1 — Shortness
 

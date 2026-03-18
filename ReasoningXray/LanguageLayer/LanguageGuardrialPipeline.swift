@@ -122,22 +122,59 @@ struct LanguageGuardrailPipeline {
         )
     }
 
-    private func rewrite(candidate: String, carrier: SignalCarrier) -> (text: String, score: EpistemicScore, steps: [RewriteStep]) {
+    private func rewrite(
+        candidate: String,
+        carrier: SignalCarrier
+    ) -> (text: String, score: EpistemicScore, steps: [RewriteStep]) {
+
         var current = candidate
         var steps: [RewriteStep] = []
+
+        let domain = carrier.domains.first ?? .trajectory
 
         let score1 = scorer.score(current, against: carrier)
         if score1.css > carrier.certaintyEnvelope.max {
             let before = current
-            if !current.contains("似乎") {
-                current = current.replacingOccurrences(of: "正在", with: "似乎正在")
+
+            switch domain {
+            case .certainty:
+                if !current.contains("目前") {
+                    current = "目前" + current
+                }
+                if !current.contains("仍") && current.contains("判断") {
+                    current = current.replacingOccurrences(of: "判断", with: "判断仍")
+                }
+
+            case .trajectory:
+                if !current.contains("逐渐") && current.contains("集中") {
+                    current = current.replacingOccurrences(of: "集中", with: "逐渐集中")
+                }
+                if !current.contains("较") && current.contains("明确") {
+                    current = current.replacingOccurrences(of: "明确", with: "较明确")
+                }
+
+            case .expectation:
+                if !current.contains("还需要") {
+                    current = "还需要继续观察。" + current
+                }
+
+            case .authority:
+                if !current.contains("暂时") {
+                    current = current.replacingOccurrences(of: "选择", with: "暂时选择")
+                }
+
+            case .emotionalTone:
+                if !current.contains("现阶段") {
+                    current = "现阶段" + current
+                }
             }
+
             if current != before {
                 steps.append(
                     RewriteStep(
                         before: before,
                         after: current,
-                        reason: "Insert uncertainty softener to reduce CSS."
+                        reason: "Reduce certainty intensity for domain-aware safety."
                     )
                 )
             }
@@ -146,15 +183,19 @@ struct LanguageGuardrailPipeline {
         let score2 = scorer.score(current, against: carrier)
         if score2.tps > carrier.temporalEnvelope.max {
             let before = current
-            if !current.contains("逐渐") {
-                current = current.replacingOccurrences(of: "聚焦", with: "逐渐聚焦")
+
+            if !current.contains("逐渐") && current.contains("改善") {
+                current = current.replacingOccurrences(of: "改善", with: "逐渐改善")
+            } else if !current.contains("后续") {
+                current = "后续" + current
             }
+
             if current != before {
                 steps.append(
                     RewriteStep(
                         before: before,
                         after: current,
-                        reason: "Insert gradual temporal marker to reduce TPS."
+                        reason: "Insert softer temporal progression marker."
                     )
                 )
             }
@@ -163,43 +204,52 @@ struct LanguageGuardrailPipeline {
         let score3 = scorer.score(current, against: carrier)
         if score3.ags > carrier.authorityEnvelope.max {
             let before = current
-            if !current.contains("医生的思路") {
-                current = "医生的思路" + current
+
+            if !current.contains("医生目前") && current.contains("医生") {
+                current = current.replacingOccurrences(of: "医生", with: "医生目前")
+            } else if !current.contains("现阶段") {
+                current = "现阶段" + current
             }
+
             if current != before {
                 steps.append(
                     RewriteStep(
                         before: before,
                         after: current,
-                        reason: "Anchor statement back to doctor reasoning to reduce AGS."
+                        reason: "Reduce authority force by re-anchoring to present-stage framing."
                     )
                 )
             }
         }
 
         let score4 = scorer.score(current, against: carrier)
-        if score4.ags < carrier.authorityEnvelope.min {
+        if score4.ets > carrier.emotionalEnvelope.max {
             let before = current
-            if current.contains("医生的思路") {
-                current = current.replacingOccurrences(of: "医生的思路", with: "目前医生的思路")
+
+            if current.contains("严重") {
+                current = current.replacingOccurrences(of: "严重", with: "更值得关注")
             }
+            if current.contains("危险") {
+                current = current.replacingOccurrences(of: "危险", with: "需要留意")
+            }
+
             if current != before {
                 steps.append(
                     RewriteStep(
                         before: before,
                         after: current,
-                        reason: "Slightly strengthen neutral structural framing to raise AGS."
+                        reason: "Reduce emotional intensity."
                     )
                 )
             }
         }
-        
-        
+
         let finalScore = scorer.score(current, against: carrier)
         return (current, finalScore, steps)
     }
 
     private func fallbackText(for carrier: SignalCarrier) -> String {
-        pack.approvedFallbacks[carrier.trajectoryState] ?? "目前还需要进一步观察。"
+        pack.approvedFallbacks[carrier.trajectoryState]?.randomElement()
+            ?? "目前还需要进一步观察。"
     }
 }

@@ -3,6 +3,8 @@ import Foundation
 final class LanguageRenderSessionContext {
 
     private var cache: [TrajectoryState: String] = [:]
+    
+    var emittedChineseOutputs: Set<String> = []
 
     func phrase(
         for state: TrajectoryState,

@@ -3,8 +3,14 @@ import Foundation
 struct TrajectoryDisplayModelBuilder {
     private let compactor = TrajectoryPresentationCompactor()
 
-    func build(from presentation: CaseTrajectoryPresentation) -> TrajectoryDisplayModel {
-        let policy = compactor.policy(for: presentation)
+    func build(
+        from presentation: CaseTrajectoryPresentation,
+        displayLanguage: DisplayLanguage
+    ) -> TrajectoryDisplayModel {
+        let policy = compactor.policy(
+            for: presentation,
+            displayLanguage: displayLanguage
+        )
 
         var sections: [TrajectoryDisplaySection] = []
 
@@ -12,7 +18,7 @@ struct TrajectoryDisplayModelBuilder {
             sections.append(
                 TrajectoryDisplaySection(
                     title: "What This Means For You",
-                    body: presentation.patient.narrativeMeaning
+                    body: presentation.patient.narrativeMeaning.resolve(for: displayLanguage)
                 )
             )
         }
@@ -21,7 +27,7 @@ struct TrajectoryDisplayModelBuilder {
             sections.append(
                 TrajectoryDisplaySection(
                     title: "What This Suggests",
-                    body: presentation.patient.reassuranceFraming
+                    body: presentation.patient.reassuranceFraming.resolve(for: displayLanguage)
                 )
             )
         }
@@ -30,7 +36,7 @@ struct TrajectoryDisplayModelBuilder {
             sections.append(
                 TrajectoryDisplaySection(
                     title: "What To Expect Next",
-                    body: presentation.patient.forwardExpectation
+                    body: presentation.patient.forwardExpectation.resolve(for: displayLanguage)
                 )
             )
         }

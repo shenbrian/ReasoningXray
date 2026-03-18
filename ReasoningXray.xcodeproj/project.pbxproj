@@ -27,7 +27,8 @@
 			membershipExceptions = (
 				Docs/level4_freeze_charter.md,
 				Docs/level5_freeze_charter.md,
-				Docs/Phase2_Language_Layer_Scope_Charter.md,
+				Docs/Phase2_Runtime_Freeze_Charter.md,
+				Docs/Phase2_Runtime/Phase2_Language_Layer_Scope_Charter.md,
 				Info.plist,
 				LanguageLayer/LanguageGuardrailPipelineTests.swift,
 				Views/Validation/Level3StressTestNotes.md,
@@ -50,7 +51,8 @@
 			membershipExceptions = (
 				Docs/level4_freeze_charter.md,
 				Docs/level5_freeze_charter.md,
-				Docs/Phase2_Language_Layer_Scope_Charter.md,
+				Docs/Phase2_Runtime_Freeze_Charter.md,
+				Docs/Phase2_Runtime/Phase2_Language_Layer_Scope_Charter.md,
 			);
 		};
 /* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */

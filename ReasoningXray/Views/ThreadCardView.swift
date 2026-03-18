@@ -1,13 +1,12 @@
 import SwiftUI
 
 struct ThreadCardView: View {
-
     let thread: CaseThread
     let visitCount: Int
 
     @EnvironmentObject var store: ReasoningHistoryStore
 
-    private var displayLanguage: DisplayLanguage {
+    private var runtimeLanguage: DisplayLanguage {
         store.displayLanguage
     }
 
@@ -25,51 +24,17 @@ struct ThreadCardView: View {
 
     private var compactPathLabel: String? {
         guard let path = presentation?.technical.overallPath else { return nil }
-
-        switch (path, displayLanguage) {
-        case (.earlyExploration, .english):
-            return "Exploring"
-        case (.earlyExploration, .chineseSimplified):
-            return "探索中"
-
-        case (.narrowing, .english):
-            return "Narrowing"
-        case (.narrowing, .chineseSimplified):
-            return "聚焦中"
-
-        case (.workingDiagnosis, .english):
-            return "Working explanation"
-        case (.workingDiagnosis, .chineseSimplified):
-            return "工作性解释"
-
-        case (.confirmation, .english):
-            return "Becoming clearer"
-        case (.confirmation, .chineseSimplified):
-            return "逐渐清晰"
-
-        case (.monitoring, .english):
-            return "Monitoring"
-        case (.monitoring, .chineseSimplified):
-            return "观察中"
-
-        case (.reopened, .english):
-            return "Reconsidering"
-        case (.reopened, .chineseSimplified):
-            return "重新考虑中"
-
-        case (.mixed, .english):
-            return "Mixed pattern"
-        case (.mixed, .chineseSimplified):
-            return "混合模式"
-        }
+        return compactEnglishPathLabel(for: path)
     }
 
     private var compactNarrativeMeaning: String {
-        guard let text = presentation?.patient.narrativeMeaning.resolve(for: displayLanguage) else {
+        guard let text = presentation?.patient.narrativeMeaning.resolve(for: runtimeLanguage) else {
             return ""
         }
 
-        if text.count <= 85 { return text }
+        if text.count <= 85 {
+            return text
+        }
 
         if let range = text.range(of: ".") {
             return String(text[..<range.upperBound])
@@ -81,47 +46,44 @@ struct ThreadCardView: View {
     private var compactExpectationLine: String? {
         guard let path = presentation?.technical.overallPath else { return nil }
 
-        switch (path, displayLanguage) {
-        case (.confirmation, .english):
+        switch path {
+        case .confirmation:
             return "Likely moving toward confirmation."
-        case (.confirmation, .chineseSimplified):
-            return "接下来可能朝确认方向推进。"
-
-        case (.narrowing, .english):
+        case .narrowing:
             return "Further clarification likely."
-        case (.narrowing, .chineseSimplified):
-            return "接下来可能会进一步澄清。"
-
-        case (.workingDiagnosis, .english):
+        case .workingDiagnosis:
             return "Treatment or confirmation likely."
-        case (.workingDiagnosis, .chineseSimplified):
-            return "接下来可能进入治疗或确认阶段。"
-
-        case (.monitoring, .english):
+        case .monitoring:
             return "Follow-up or observation likely."
-        case (.monitoring, .chineseSimplified):
-            return "接下来可能继续随访或观察。"
-
-        case (.reopened, .english):
+        case .reopened:
             return "Reassessment likely."
-        case (.reopened, .chineseSimplified):
-            return "接下来可能会重新评估。"
-
-        case (.earlyExploration, .english):
+        case .earlyExploration:
             return "More exploration likely."
-        case (.earlyExploration, .chineseSimplified):
-            return "接下来可能继续探索。"
-
-        case (.mixed, .english):
+        case .mixed:
             return "Direction still evolving."
-        case (.mixed, .chineseSimplified):
-            return "当前方向仍在演变中。"
+        }
+    }
+
+    private var reasoningSignalLine: some View {
+        Group {
+            if let presentation = presentation {
+                HStack(spacing: 8) {
+                    Text(compactEnglishPathLabel(for: presentation.technical.overallPath))
+                        .font(.caption.weight(.semibold))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(.blue.opacity(0.12), in: Capsule())
+
+                    Text(readableLabel(for: presentation.technical.certaintyTrend))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
         }
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-
             HStack(alignment: .top, spacing: 8) {
                 Text(thread.title)
                     .font(.headline)
@@ -144,6 +106,8 @@ struct ThreadCardView: View {
 
             if let presentation {
                 Divider()
+
+                reasoningSignalLine
 
                 if let compactPathLabel {
                     Text(compactPathLabel)
@@ -177,5 +141,34 @@ struct ThreadCardView: View {
         .padding()
         .background(.thinMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func compactEnglishPathLabel(for path: ReasoningOverallPath) -> String {
+        switch path {
+        case .earlyExploration:
+            return "Exploring"
+        case .narrowing:
+            return "Narrowing"
+        case .workingDiagnosis:
+            return "Working explanation"
+        case .confirmation:
+            return "Becoming clearer"
+        case .monitoring:
+            return "Monitoring"
+        case .reopened:
+            return "Reconsidering"
+        case .mixed:
+            return "Mixed pattern"
+        }
+    }
+
+    private func readableLabel(for value: Any) -> String {
+        let raw = String(describing: value)
+        let withSpaces = raw.replacingOccurrences(
+            of: "([a-z])([A-Z])",
+            with: "$1 $2",
+            options: .regularExpression
+        )
+        return withSpaces.prefix(1).uppercased() + withSpaces.dropFirst()
     }
 }

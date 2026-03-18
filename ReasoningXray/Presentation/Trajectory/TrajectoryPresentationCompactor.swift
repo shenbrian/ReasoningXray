@@ -10,17 +10,25 @@ struct TrajectoryPresentationPolicy {
 
 struct TrajectoryPresentationCompactor {
 
-    func policy(for presentation: CaseTrajectoryPresentation) -> TrajectoryPresentationPolicy {
+    func policy(
+        for presentation: CaseTrajectoryPresentation,
+        displayLanguage: DisplayLanguage
+    ) -> TrajectoryPresentationPolicy {
 
         let technical = normalized(presentation.technical.summary)
-        let meaning = normalized(presentation.patient.narrativeMeaning)
-        let implication = normalized(presentation.patient.reassuranceFraming)
-        let nextStep = normalized(presentation.patient.forwardExpectation)
+        let meaning = normalized(
+            presentation.patient.narrativeMeaning.resolve(for: displayLanguage)
+        )
+        let implication = normalized(
+            presentation.patient.reassuranceFraming.resolve(for: displayLanguage)
+        )
+        let nextStep = normalized(
+            presentation.patient.forwardExpectation.resolve(for: displayLanguage)
+        )
 
         let showTechnicalSummary = !technical.isEmpty
         let showPatientMeaning = !meaning.isEmpty
 
-        // NEW — implication suppression refinement
         let implicationAddsNewIdea = !(
             implication.contains("clear") ||
             implication.contains("clearer") ||

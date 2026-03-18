@@ -1,0 +1,2 @@
+Phase 5 Scope Charter
+ReasoningXray Phase 5 will implement a small presentation-only Reasoning Signal Highlight Layer inside Thread Detail. This layer will surface a limited number of concise signals showing how doctor reasoning changed, stabilized, or became more provisional across visits. It will reuse existing reasoning comparison outputs, avoid detector expansion, avoid advice behavior, and preserve the product’s role as a reasoning-visibility instrument rather than a diagnostic or treatment tool.

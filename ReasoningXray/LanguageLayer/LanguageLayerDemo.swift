@@ -2,17 +2,20 @@ import Foundation
 
 enum LanguageLayerDemo {
     static func runNarrowingDemo() {
+        
         let carrier = SignalCarrier(
             id: "seg_narrowing_001",
             sourceText: "The reasoning appears to be narrowing toward a more focused explanation.",
             domains: [.trajectory, .certainty],
             trajectoryState: .narrowing,
+            certaintyState: .emergingClarity,
+            expectationState: nil,
+            semanticRole: .summary,
             certaintyEnvelope: ScoreEnvelope(min: 0.35, max: 0.55),
             temporalEnvelope: ScoreEnvelope(min: 0.10, max: 0.40),
             authorityEnvelope: ScoreEnvelope(min: 0.15, max: 0.45),
             emotionalEnvelope: ScoreEnvelope(min: 0.10, max: 0.30)
         )
-
         let pipeline = LanguageGuardrailPipeline()
         let session = LanguageRenderSessionContext()
 
